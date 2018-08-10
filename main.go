@@ -27,6 +27,9 @@ func getShoppingList (w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Response{Success: 1, Message: "The Shopping List", ShoppingItem: shoppingItemList})
 }
 
+func addShoppingItem (w http.ResponseWriter, r *http.Request) {
+	
+
 func main() {
 
 //	shoppingItemList[shoppingItem{1, "Kolagach", 34.5}]
@@ -41,5 +44,6 @@ func main() {
 //	m.HandleFunc("/shoppingList/list", updateShoppingItem).Methods("PUT")
 //	m.HandleFunc("/shoppingList/list/{id}", deleteShoppingItem).Methods("DELETE")
 
-log.Fatal(http.ListenAndServe(":8000", m))
+	log.Fatal(http.ListenAndServe(":8000", m))
+
 }

@@ -10,16 +10,16 @@ import (
 )
 
 type shoppingItem struct {
-	Id    int     `json:"id, omitempty"`
-	Name  string  `json:"name, omitempty"`
-	Price float64 `json:"price, omitempty"`
-	Count int     `json:"count, omitempty"`
+	Id    int     `json:"Id,omitempty"`
+	Name  string  `json:"Name,omitempty"`
+	Price float64 `json:"Price,omitempty"`
+	Count int     `json:"Count,omitempty"`
 }
 
 type Response struct {
 	Success      int            `json:"success"`
 	Message      string         `json:"message"`
-	ShoppingItem []shoppingItem `json:"shoppingItem, omitempty"`
+	ShoppingItem []shoppingItem `json:"shoppingItem,omitempty"`
 }
 
 var shoppingItemList []shoppingItem

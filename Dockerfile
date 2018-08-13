@@ -1,4 +1,4 @@
 FROM busybox:glibc
 EXPOSE 12345
-ADD shopping-list /bin/shopping-list
+ADD main /bin/shopping-list
 CMD ["shopping-list"]

@@ -1,41 +1,41 @@
 package main
 
 import (
-	"net/http"
 	"encoding/json"
 	"log"
+	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 )
 
 type shoppingItem struct {
-	Id int	`json:"Id, omitempty"`
-	Name string `json:"Name, omitempty"`
+	Id    int     `json:"Id, omitempty"`
+	Name  string  `json:"Name, omitempty"`
 	Price float64 `json:"Price, omitempty"`
-	Count int `json:"Count, omitempty"`
+	Count int     `json:"Count, omitempty"`
 }
 
 type Response struct {
-	Success int    `json:"success"`
-	Message string `json:"message"`
-	ShoppingItem   []shoppingItem `json:"shoppingItem, omitempty"`
+	Success      int            `json:"success"`
+	Message      string         `json:"message"`
+	ShoppingItem []shoppingItem `json:"shoppingItem, omitempty"`
 }
 
 var shoppingItemList []shoppingItem
 var idCount int
 
-func getShoppingList (w http.ResponseWriter, r *http.Request) {
+func getShoppingList(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Response{Success: 1, Message: "The Shopping List", ShoppingItem: shoppingItemList})
 }
 
-func addShoppingItem (w http.ResponseWriter, r *http.Request) {
+func addShoppingItem(w http.ResponseWriter, r *http.Request) {
 	var shoppingItemInput shoppingItem
 
 	err := json.NewDecoder(r.Body).Decode(&shoppingItemInput)
 
 	if err == nil {
-		if shoppingItemInput.Name == "" || shoppingItemInput.Price < 0 || shoppingItemInput.Count < 0  {
+		if shoppingItemInput.Name == "" || shoppingItemInput.Price < 0 || shoppingItemInput.Count < 0 {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid or insufficient information"})
 			return
@@ -50,7 +50,7 @@ func addShoppingItem (w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func updateShoppingItem (w http.ResponseWriter, r *http.Request) {
+func updateShoppingItem(w http.ResponseWriter, r *http.Request) {
 	var shoppingItemInput shoppingItem
 	tmpVar := mux.Vars(r)
 	reqIdx, err := strconv.Atoi(tmpVar["id"])
@@ -68,11 +68,11 @@ func updateShoppingItem (w http.ResponseWriter, r *http.Request) {
 			}
 
 			for i, item := range shoppingItemList {
-					if item.Id == reqIdx {
-						shoppingItemList[i] = shoppingItemInput
-						json.NewEncoder(w).Encode(Response{Success: 1, Message: "Updated information", ShoppingItem: shoppingItemList})
-						return
-					}
+				if item.Id == reqIdx {
+					shoppingItemList[i] = shoppingItemInput
+					json.NewEncoder(w).Encode(Response{Success: 1, Message: "Updated information", ShoppingItem: shoppingItemList})
+					return
+				}
 			}
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
@@ -89,14 +89,14 @@ func updateShoppingItem (w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid item ID or item not found"})
 }
 
-func deleteShoppingItem (w http.ResponseWriter, r *http.Request) {
+func deleteShoppingItem(w http.ResponseWriter, r *http.Request) {
 	tmpVar := mux.Vars(r)
 	reqIdx, err := strconv.Atoi(tmpVar["id"])
 
 	if err == nil {
 		for i, item := range shoppingItemList {
 			if item.Id == reqIdx {
-				shoppingItemList = append(shoppingItemList[:i], shoppingItemList[i + 1:]...)
+				shoppingItemList = append(shoppingItemList[:i], shoppingItemList[i+1:]...)
 				json.NewEncoder(w).Encode(Response{Success: 1, Message: "Deleted item successfully", ShoppingItem: shoppingItemList})
 				return
 			}
@@ -104,19 +104,19 @@ func deleteShoppingItem (w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid or insufficient information"})
+		return
 	}
-	
+
 	w.WriteHeader(http.StatusNotFound)
 	json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid item ID or item not found"})
 }
-
 
 func main() {
 	idCount = 0
 
 	m := mux.NewRouter()
 
-	m.HandleFunc("/shoppinglist/list/",  getShoppingList).Methods("GET")
+	m.HandleFunc("/shoppinglist/list/", getShoppingList).Methods("GET")
 	m.HandleFunc("/shoppinglist/list/", addShoppingItem).Methods("POST")
 	m.HandleFunc("/shoppinglist/list/{id}", updateShoppingItem).Methods("PUT")
 	m.HandleFunc("/shoppinglist/list/{id}", deleteShoppingItem).Methods("DELETE")

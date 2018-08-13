@@ -10,10 +10,10 @@ import (
 )
 
 type shoppingItem struct {
-	Id    int     `json:"Id, omitempty"`
-	Name  string  `json:"Name, omitempty"`
-	Price float64 `json:"Price, omitempty"`
-	Count int     `json:"Count, omitempty"`
+	Id    int     `json:"id, omitempty"`
+	Name  string  `json:"name, omitempty"`
+	Price float64 `json:"price, omitempty"`
+	Count int     `json:"count, omitempty"`
 }
 
 type Response struct {
@@ -121,5 +121,5 @@ func main() {
 	m.HandleFunc("/shoppinglist/list/{id}", updateShoppingItem).Methods("PUT")
 	m.HandleFunc("/shoppinglist/list/{id}", deleteShoppingItem).Methods("DELETE")
 
-	log.Fatal(http.ListenAndServe(":8000", m))
+	log.Fatal(http.ListenAndServe(":12345", m))
 }

@@ -14,7 +14,7 @@ type shoppingItem struct {
 	Id int	`json:"Id, omitempty"`
 	Name string `json:"Name, omitempty"`
 	Price float64 `json:"Price, omitempty"`
-	Count int `json:"Id, omitempty"`
+	Count int `json:"Count, omitempty"`
 }
 
 type Response struct {
@@ -23,7 +23,6 @@ type Response struct {
 	ShoppingItem   []shoppingItem `json:"shoppingItem, omitempty"`
 }
 
-//var shoppingItemList = make(map[shoppingItem]bool)
 var shoppingItemList []shoppingItem
 var idCount int
 
@@ -70,6 +69,7 @@ func updateShoppingItem (w http.ResponseWriter, r *http.Request) {
 			if item.Id == reqIdx {
 				fmt.Println(shoppingItemInput.Id)
 				shoppingItemList[i] = shoppingItemInput
+				json.NewEncoder(w).Encode(Response{Success: 1, Message: "Updated information", ShoppingItem: shoppingItemList})
 				return
 			}
 	}
@@ -78,14 +78,21 @@ func updateShoppingItem (w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Response{Success :0, Message: "Invalid item ID or item not found"})
 }
 
-func deleteShoppingItem (w http.Response, r *http.Request) {
+func deleteShoppingItem (w http.ResponseWriter, r *http.Request) {
+	tmpVar := mux.Vars(r)
+	reqIdx, _ := strconv.Atoi(tmpVar["id"])
 
+	for i, item := range shoppingItemList {
+		if item.Id == reqIdx {
+			shoppingItemList = append(shoppingItemList[:i], shoppingItemList[i + 1:]...)
+			json.NewEncoder(w).Encode(Response{Success: 1, Message: "Deleted item successfully", ShoppingItem: shoppingItemList})
+			return
+		}
+	}
 }
 
 
 func main() {
-//	shoppingItemList[shoppingItem{1, "Kolagach", 34.5}]
-//	shoppingItemList[0] = shoppingItem{1, "kolagach", 34.5};
 	idCount = 0
 	fmt.Println("DOING")
 	shoppingItemList = append(shoppingItemList, shoppingItem{1, "Kolagach", 34.5, 1})
@@ -96,7 +103,7 @@ func main() {
 
 	m.HandleFunc("/shoppinglist/list", addShoppingItem).Methods("POST")
 	m.HandleFunc("/shoppinglist/list/{id}", updateShoppingItem).Methods("PUT")
-//	m.HandleFunc("/shoppinglist/list/{id}", deleteShoppingItem).Methods("DELETE")
+	m.HandleFunc("/shoppinglist/list/{id}", deleteShoppingItem).Methods("DELETE")
 
 	log.Fatal(http.ListenAndServe(":8000", m))
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"strconv"
-	"fmt"
 
 	"github.com/gorilla/mux"
 )
@@ -44,7 +43,6 @@ func addShoppingItem (w http.ResponseWriter, r *http.Request) {
 		idCount++
 		shoppingItemInput.Id = idCount
 		shoppingItemList = append(shoppingItemList, shoppingItemInput)
-		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(Response{Success: 1, Message: "Item added successfully"})
 	} else {
 		w.WriteHeader(http.StatusBadRequest)
@@ -55,53 +53,71 @@ func addShoppingItem (w http.ResponseWriter, r *http.Request) {
 func updateShoppingItem (w http.ResponseWriter, r *http.Request) {
 	var shoppingItemInput shoppingItem
 	tmpVar := mux.Vars(r)
-	reqIdx, _ := strconv.Atoi(tmpVar["id"])
-	
-	json.NewDecoder(r.Body).Decode(&shoppingItemInput)
+	reqIdx, err := strconv.Atoi(tmpVar["id"])
 
-	if shoppingItemInput.Name == "" || shoppingItemInput.Price < 0 || shoppingItemInput.Count < 0 {
+	if err == nil {
+		err = json.NewDecoder(r.Body).Decode(&shoppingItemInput)
+
+		shoppingItemInput.Id = reqIdx
+
+		if err == nil {
+			if shoppingItemInput.Name == "" || shoppingItemInput.Price < 0 || shoppingItemInput.Count < 0 {
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid information"})
+				return
+			}
+
+			for i, item := range shoppingItemList {
+					if item.Id == reqIdx {
+						shoppingItemList[i] = shoppingItemInput
+						json.NewEncoder(w).Encode(Response{Success: 1, Message: "Updated information", ShoppingItem: shoppingItemList})
+						return
+					}
+			}
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid or insufficient information"})
+			return
+		}
+	} else {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid information"})
+		json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid or insufficient information"})
 		return
 	}
 
-	for i, item := range shoppingItemList {
-			if item.Id == reqIdx {
-				fmt.Println(shoppingItemInput.Id)
-				shoppingItemList[i] = shoppingItemInput
-				json.NewEncoder(w).Encode(Response{Success: 1, Message: "Updated information", ShoppingItem: shoppingItemList})
-				return
-			}
-	}
-
 	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(Response{Success :0, Message: "Invalid item ID or item not found"})
+	json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid item ID or item not found"})
 }
 
 func deleteShoppingItem (w http.ResponseWriter, r *http.Request) {
 	tmpVar := mux.Vars(r)
-	reqIdx, _ := strconv.Atoi(tmpVar["id"])
+	reqIdx, err := strconv.Atoi(tmpVar["id"])
 
-	for i, item := range shoppingItemList {
-		if item.Id == reqIdx {
-			shoppingItemList = append(shoppingItemList[:i], shoppingItemList[i + 1:]...)
-			json.NewEncoder(w).Encode(Response{Success: 1, Message: "Deleted item successfully", ShoppingItem: shoppingItemList})
-			return
+	if err == nil {
+		for i, item := range shoppingItemList {
+			if item.Id == reqIdx {
+				shoppingItemList = append(shoppingItemList[:i], shoppingItemList[i + 1:]...)
+				json.NewEncoder(w).Encode(Response{Success: 1, Message: "Deleted item successfully", ShoppingItem: shoppingItemList})
+				return
+			}
 		}
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid or insufficient information"})
 	}
+	
+	w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid item ID or item not found"})
 }
 
 
 func main() {
 	idCount = 0
-	fmt.Println("DOING")
-	shoppingItemList = append(shoppingItemList, shoppingItem{1, "Kolagach", 34.5, 1})
 
 	m := mux.NewRouter()
 
-	m.HandleFunc("/shoppinglist/list",  getShoppingList).Methods("GET")
-
-	m.HandleFunc("/shoppinglist/list", addShoppingItem).Methods("POST")
+	m.HandleFunc("/shoppinglist/list/",  getShoppingList).Methods("GET")
+	m.HandleFunc("/shoppinglist/list/", addShoppingItem).Methods("POST")
 	m.HandleFunc("/shoppinglist/list/{id}", updateShoppingItem).Methods("PUT")
 	m.HandleFunc("/shoppinglist/list/{id}", deleteShoppingItem).Methods("DELETE")
 

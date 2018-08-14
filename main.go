@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+//	"fmt"
 
 	"github.com/gorilla/mux"
 )
@@ -35,11 +36,20 @@ func addShoppingItem(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&shoppingItemInput)
 
 	if err == nil {
-		if shoppingItemInput.Name == "" || shoppingItemInput.Price < 0 || shoppingItemInput.Count < 0 {
+		if shoppingItemInput.Name == "" || shoppingItemInput.Price <= 0 || shoppingItemInput.Count <= 0 {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid or insufficient information"})
 			return
 		}
+
+		for _, item := range shoppingItemList {
+			if item.Name == shoppingItemInput.Name {
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(Response{Success: 0, Message: "Item exists, please update the item"})
+				return
+			}
+		}
+
 		idCount++
 		shoppingItemInput.Id = idCount
 		shoppingItemList = append(shoppingItemList, shoppingItemInput)
@@ -61,7 +71,7 @@ func updateShoppingItem(w http.ResponseWriter, r *http.Request) {
 		shoppingItemInput.Id = reqIdx
 
 		if err == nil {
-			if shoppingItemInput.Name == "" || shoppingItemInput.Price < 0 || shoppingItemInput.Count < 0 {
+			if shoppingItemInput.Name == "" || shoppingItemInput.Price <= 0 || shoppingItemInput.Count <= 0 {
 				w.WriteHeader(http.StatusBadRequest)
 				json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid information"})
 				return

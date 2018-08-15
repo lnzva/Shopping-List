@@ -11,6 +11,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
+/*****************Required Structs***************/
+
+//struct for shopping item
 type shoppingItem struct {
 	Id    int     `json:"Id,omitempty"`
 	Name  string  `json:"Name,omitempty"`
@@ -18,25 +21,35 @@ type shoppingItem struct {
 	Count int     `json:"Count,omitempty"`
 }
 
+//struct for responding through json object
 type Response struct {
 	Success      int            `json:"success"`
 	Message      string         `json:"message"`
 	ShoppingItem []shoppingItem `json:"shoppingItem,omitempty"`
 }
 
+//struct that represents the user
 type User struct {
 	UserName string `json:"Username,omitempty"`
 	Password string `json:"Password,omitmepty"`
 }
 
-var shoppingItemList []shoppingItem
-var userList = make(map[string]User)
-var idCount int
+/*****************Required global variables***************/
 
-var access sync.Mutex
+var (
+	shoppingItemList []shoppingItem
+	userList = make(map[string]User)
+	idCount int
 
+	access sync.Mutex
+)
+
+/*****************Basic Authentication Function***************/
+
+//function to check if user is already logged in
 func isLoggedIn(r *http.Request) bool {
 	cookie, err := r.Cookie("UserName")
+
 	if err == nil {
 		access.Lock()
 		defer access.Unlock()
@@ -48,6 +61,7 @@ func isLoggedIn(r *http.Request) bool {
 	}
 }
 
+//function to handle user registration
 func registerUser(w http.ResponseWriter,r *http.Request) {
 	if isLoggedIn(r) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -55,9 +69,10 @@ func registerUser(w http.ResponseWriter,r *http.Request) {
 		return
 	}
 
-	var newUser User
+	var tmpUser User
+	var flag bool
 
-	tmpUserName, tmpPassword, flag := r.BasicAuth()
+	tmpUser.UserName, tmpUser.Password, flag = r.BasicAuth()
 
 	access.Lock()
 	defer access.Unlock()
@@ -66,22 +81,21 @@ func registerUser(w http.ResponseWriter,r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid or insufficient information"})
 	} else {
-		if _, found := userList[tmpUserName]; found == true {
-			w.WriteHeader(http.StatusBadRequest)
+		if _, found := userList[tmpUser.UserName]; found == true {
+			w.WriteHeader(http.StatusNotAcceptable)
 			json.NewEncoder(w).Encode(Response{Success: 0, Message: "Username already exists"})
-			return
-		} else if tmpUserName == "" || tmpPassword == "" {
-			w.WriteHeader(http.StatusBadRequest)
+		} else if tmpUser.UserName == "" || tmpUser.Password == "" {
+			w.WriteHeader(http.StatusNotAcceptable)
 			json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid username or password"})
 		} else {
-			newUser.UserName = tmpUserName
-			newUser.Password = tmpPassword
-			userList[newUser.UserName] = newUser
+			userList[tmpUser.UserName] = tmpUser
 			json.NewEncoder(w).Encode(Response{Success: 1, Message: "User registered successfully"})
 		}
 	}
 }
 
+
+//function to handle user login
 func loginUser(w http.ResponseWriter, r *http.Request) {
 	if isLoggedIn(r) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -89,7 +103,10 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpUserName, tmpPassword, flag := r.BasicAuth()
+	var tmpUser User
+	var flag bool
+
+	tmpUser.UserName, tmpUser.Password, flag = r.BasicAuth()
 
 	access.Lock()
 	defer access.Unlock()
@@ -98,9 +115,9 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid or insufficient information"})
 	} else {
-		val, found := userList[tmpUserName]
-		if found == true && val.Password == tmpPassword {
-			cookie := http.Cookie{Name: "UserName", Value: tmpUserName, Path: "/shoppinglist"}
+		val, found := userList[tmpUser.UserName]
+		if found == true && val.Password == tmpUser.Password {
+			cookie := http.Cookie{Name: "UserName", Value: tmpUser.UserName, Path: "/shoppinglist"}
 			http.SetCookie(w, &cookie)
 			json.NewEncoder(w).Encode(Response{Success: 1, Message: "User logged-in successfully"})
 		} else {
@@ -110,6 +127,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//function to logout user
 func logoutUser(w http.ResponseWriter, r *http.Request) {
 	if isLoggedIn(r) == false {
 		w.WriteHeader(http.StatusBadRequest)
@@ -121,6 +139,10 @@ func logoutUser(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &cookie)
 	json.NewEncoder(w).Encode(Response{Success: 1, Message: "Logged out"})
 }
+
+/*****************Handling Shopping List and Items***************/
+
+//get all items in list
 func getShoppingList(w http.ResponseWriter, r *http.Request) {
 	if isLoggedIn(r) == false {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -134,6 +156,7 @@ func getShoppingList(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Response{Success: 1, Message: "The Shopping List", ShoppingItem: shoppingItemList})
 }
 
+//add an item to list
 func addShoppingItem(w http.ResponseWriter, r *http.Request) {
 	if isLoggedIn(r) == false {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -147,7 +170,7 @@ func addShoppingItem(w http.ResponseWriter, r *http.Request) {
 
 	if err == nil {
 		if shoppingItemInput.Name == "" || shoppingItemInput.Price <= 0 || shoppingItemInput.Count <= 0 {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusNotAcceptable)
 			json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid or insufficient information"})
 			return
 		}
@@ -157,7 +180,7 @@ func addShoppingItem(w http.ResponseWriter, r *http.Request) {
 
 		for _, item := range shoppingItemList {
 			if item.Name == shoppingItemInput.Name {
-				w.WriteHeader(http.StatusBadRequest)
+				w.WriteHeader(http.StatusNotAcceptable)
 				json.NewEncoder(w).Encode(Response{Success: 0, Message: "Item exists, please update the item"})
 				return
 			}
@@ -174,6 +197,7 @@ func addShoppingItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//update an entry in list
 func updateShoppingItem(w http.ResponseWriter, r *http.Request) {
 	if isLoggedIn(r) == false {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -187,12 +211,11 @@ func updateShoppingItem(w http.ResponseWriter, r *http.Request) {
 
 	if err == nil {
 		err = json.NewDecoder(r.Body).Decode(&shoppingItemInput)
-
 		shoppingItemInput.Id = reqIdx
 
 		if err == nil {
 			if shoppingItemInput.Name == "" || shoppingItemInput.Price <= 0 || shoppingItemInput.Count <= 0 {
-				w.WriteHeader(http.StatusBadRequest)
+				w.WriteHeader(http.StatusNotAcceptable)
 				json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid information"})
 				return
 			}
@@ -200,12 +223,23 @@ func updateShoppingItem(w http.ResponseWriter, r *http.Request) {
 			access.Lock()
 			defer access.Unlock()
 
+			tmpIdx := -1
+
 			for i, item := range shoppingItemList {
-				if item.Id == reqIdx {
-					shoppingItemList[i] = shoppingItemInput
-					json.NewEncoder(w).Encode(Response{Success: 1, Message: "Updated information", ShoppingItem: shoppingItemList})
+				if shoppingItemInput.Name == item.Name && item.Id != reqIdx {
+					w.WriteHeader(http.StatusNotAcceptable)
+					json.NewEncoder(w).Encode(Response{Success: 0, Message: "Item of same name exists in another index, please choose another name or update that item"})
 					return
 				}
+				if item.Id == reqIdx {
+					tmpIdx = i
+				}
+			}
+
+			if tmpIdx != -1 {
+				shoppingItemList[tmpIdx] = shoppingItemInput
+				json.NewEncoder(w).Encode(Response{Success: 1, Message: "Updated information", ShoppingItem: shoppingItemList})
+				return
 			}
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
@@ -222,6 +256,8 @@ func updateShoppingItem(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid item ID or item not found"})
 }
 
+
+//delete an item from list
 func deleteShoppingItem(w http.ResponseWriter, r *http.Request) {
 	if isLoggedIn(r) == false {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -253,6 +289,7 @@ func deleteShoppingItem(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid item ID or item not found"})
 }
 
+/***************Le main function***************/
 
 func main() {
 	idCount = 0

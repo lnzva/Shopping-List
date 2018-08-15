@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -38,8 +38,8 @@ type User struct {
 
 var (
 	shoppingItemList []shoppingItem
-	userList = make(map[string]User)
-	idCount int
+	userList         = make(map[string]User)
+	idCount          int
 
 	access sync.Mutex
 )
@@ -62,7 +62,7 @@ func isLoggedIn(r *http.Request) bool {
 }
 
 //function to handle user registration
-func registerUser(w http.ResponseWriter,r *http.Request) {
+func registerUser(w http.ResponseWriter, r *http.Request) {
 	if isLoggedIn(r) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{Success: 0, Message: "User already logged in; Please logout to register new user!"})
@@ -93,7 +93,6 @@ func registerUser(w http.ResponseWriter,r *http.Request) {
 		}
 	}
 }
-
 
 //function to handle user login
 func loginUser(w http.ResponseWriter, r *http.Request) {
@@ -255,7 +254,6 @@ func updateShoppingItem(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	json.NewEncoder(w).Encode(Response{Success: 0, Message: "Invalid item ID or item not found"})
 }
-
 
 //delete an item from list
 func deleteShoppingItem(w http.ResponseWriter, r *http.Request) {
